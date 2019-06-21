@@ -1,30 +1,38 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-"""
-Programa cliente que abre un socket a un servidor
-"""
+"""Programa cliente que abre un socket a un servidor."""
 
 import socket
+import sys
 
-# Cliente UDP simple.
+try:
+    METHOD = sys.argv[1]  # Método SIP
+    RECEIVER = sys.argv[2].split(':')[0]   # Receptor@IP.
+    IP = RECEIVER.split('@')[-1]  # Dirección IP.
+    PORT = int(sys.argv[2].split(':')[1])  # PuertoSIP.
 
-# Dirección IP del servidor.
-SERVER = 'localhost'
-PORT = 6001
+except (IndexError, ValueError):
+    sys.exit("Usage: python3 client.py method receiver@IP:SIPport")
 
-# Contenido que vamos a enviar
-LINE = '¡Hola mundo!'
 
-# Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
-with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
-    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    my_socket.connect((SERVER, PORT))
+try:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
+        my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        my_socket.connect((IP, PORT))
 
-    print("Enviando: " + LINE)
-    my_socket.send(bytes(LINE, 'utf-8') + b'\r\n')
-    data = my_socket.recv(1024)
+        CODE = (METHOD + ' sip:' + RECEIVER + ' SIP/2.0\r\n\r\n')
+        print(CODE)
+        my_socket.send(bytes(CODE, 'utf-8'))
+        data = my_socket.recv(1024)
+        if METHOD == 'INVITE' and data.decode('utf-8').split()[-2] == '200':
+            my_socket.send(bytes('ACK sip:' + RECEIVER + ' SIP/2.0\r\n\r\n',
+                                 'utf-8'))
+            print(data.decode('utf-8'))
+        if method == 'BYE':
+            print('FINISHING CONNECTION.')
 
-    print('Recibido -- ', data.decode('utf-8'))
-    print("Terminando socket...")
+except ConnectionRefusedError:
+    print('CONNECTION ERROR')
 
-print("Fin.")
+except (IndexError, ValueError):
+    sys.exit('Try: NAME@IP:PORT')
